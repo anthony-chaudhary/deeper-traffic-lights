@@ -1,4 +1,8 @@
 import tensorflow as tf
+import yaml
+import os
+import PIL.Image
+import io
 
 from object_detection.utils import dataset_util
 
@@ -7,52 +11,102 @@ flags = tf.app.flags
 flags.DEFINE_string('output_path', '', 'Path to output TFRecord')
 FLAGS = flags.FLAGS
 
+LABEL_DICT =  {
+    "Green" : 1,
+    "Red" : 2,
+    "GreenLeft" : 3,
+    "GreenRight" : 4,
+    "RedLeft" : 5,
+    "RedRight" : 6,
+    "Yellow" : 7,
+    "off" : 8,
+    "RedStraight" : 9,
+    "GreenStraight" : 10,
+    "GreenStraightLeft" : 11,
+    "GreenStraightRight" : 12,
+    "RedStraightLeft" : 13,
+    "RedStraightRight" : 14
+    }
 
 def create_tf_example(example):
-  # TODO(user): Populate the following variables from your example.
-  height = None # Image height
-  width = None # Image width
-  filename = None # Filename of the image. Empty if image is not from file
-  encoded_image_data = None # Encoded image bytes
-  image_format = None # b'jpeg' or b'png'
+    # TODO(user): Populate the following variables from your example.
+    height = 720 # Image height
+    width = 1280 # Image width
+    filename = example['path'] # Filename of the image. Empty if image is not from file
+    filename = filename.encode()
 
-  xmins = [] # List of normalized left x coordinates in bounding box (1 per box)
-  xmaxs = [] # List of normalized right x coordinates in bounding box
-             # (1 per box)
-  ymins = [] # List of normalized top y coordinates in bounding box (1 per box)
-  ymaxs = [] # List of normalized bottom y coordinates in bounding box
-             # (1 per box)
-  classes_text = [] # List of string class name of bounding box (1 per box)
-  classes = [] # List of integer class id of bounding box (1 per box)
+    with tf.gfile.GFile(example['path'], 'rb') as fid:
+        encoded_image = fid.read()
 
-  tf_example = tf.train.Example(features=tf.train.Features(feature={
-      'image/height': dataset_util.int64_feature(height),
-      'image/width': dataset_util.int64_feature(width),
-      'image/filename': dataset_util.bytes_feature(filename),
-      'image/source_id': dataset_util.bytes_feature(filename),
-      'image/encoded': dataset_util.bytes_feature(encoded_image_data),
-      'image/format': dataset_util.bytes_feature(image_format),
-      'image/object/bbox/xmin': dataset_util.float_list_feature(xmins),
-      'image/object/bbox/xmax': dataset_util.float_list_feature(xmaxs),
-      'image/object/bbox/ymin': dataset_util.float_list_feature(ymins),
-      'image/object/bbox/ymax': dataset_util.float_list_feature(ymaxs),
-      'image/object/class/text': dataset_util.bytes_list_feature(classes_text),
-      'image/object/class/label': dataset_util.int64_list_feature(classes),
-  }))
-  return tf_example
+    #encoded_jpg_io = io.BytesIO(encoded_jpg)
+    #image = PIL.Image.open(encoded_jpg_io)
+    #encoded_image_data = image.tostring() # Encoded image bytes
+    image_format = 'png'.encode() # b'jpeg' or b'png'
+
+    xmins = [] # List of normalized left x coordinates in bounding box (1 per box)
+    xmaxs = [] # List of normalized right x coordinates in bounding box
+                # (1 per box)
+    ymins = [] # List of normalized top y coordinates in bounding box (1 per box)
+    ymaxs = [] # List of normalized bottom y coordinates in bounding box
+                # (1 per box)
+    classes_text = [] # List of string class name of bounding box (1 per box)
+    classes = [] # List of integer class id of bounding box (1 per box)
+
+    for box in example['boxes']:
+        if box['occluded'] is False:
+            #print("adding box")
+            xmins.append(float(box['x_min'] / width))
+            xmaxs.append(float(box['x_max'] / width))
+            ymins.append(float(box['y_min'] / height))
+            ymaxs.append(float(box['y_max'] / height))
+            classes_text.append(box['label'].encode())
+            classes.append(int(LABEL_DICT[box['label']]))
+
+
+    tf_example = tf.train.Example(features=tf.train.Features(feature={
+        'image/height': dataset_util.int64_feature(height),
+        'image/width': dataset_util.int64_feature(width),
+        'image/filename': dataset_util.bytes_feature(filename),
+        'image/source_id': dataset_util.bytes_feature(filename),
+        'image/encoded': dataset_util.bytes_feature(encoded_image),
+        'image/format': dataset_util.bytes_feature(image_format),
+        'image/object/bbox/xmin': dataset_util.float_list_feature(xmins),
+        'image/object/bbox/xmax': dataset_util.float_list_feature(xmaxs),
+        'image/object/bbox/ymin': dataset_util.float_list_feature(ymins),
+        'image/object/bbox/ymax': dataset_util.float_list_feature(ymaxs),
+        'image/object/class/text': dataset_util.bytes_list_feature(classes_text),
+        'image/object/class/label': dataset_util.int64_list_feature(classes),
+    }))
+
+    return tf_example
 
 
 def main(_):
-  writer = tf.python_io.TFRecordWriter(FLAGS.output_path)
+    
+    writer = tf.python_io.TFRecordWriter(FLAGS.output_path)
 
-  # TODO(user): Write code to read in your dataset to examples variable
+    INPUT_YAML = "data/dataset_train_rgb/train.yaml"
+    examples = yaml.load(open(INPUT_YAML, 'rb').read())
 
-  for example in examples:
-    tf_example = create_tf_example(example)
-    writer.write(tf_example.SerializeToString())
+    #examples = examples[:10]  # for testing
+    len_examples = len(examples)
+    print("Loaded ", len(examples), "examples")
 
-  writer.close()
+    for i in range(len(examples)):
+        examples[i]['path'] = os.path.abspath(os.path.join(os.path.dirname(INPUT_YAML), examples[i]['path']))
+    
+    counter = 0
+    for example in examples:
+        tf_example = create_tf_example(example)
+        writer.write(tf_example.SerializeToString())
+
+        if counter % 10 == 0:
+            print("Percent done", (counter/len_examples)*100)
+        counter += 1
+
+    writer.close()
+
 
 
 if __name__ == '__main__':
-  tf.app.run()
+    tf.app.run()

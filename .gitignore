@@ -138,3 +138,9 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 ssd_inception_v2_coco_11_06_2017/
+
+data/
+tf_records_data/
+train_out/
+eval_out/
+utils/
