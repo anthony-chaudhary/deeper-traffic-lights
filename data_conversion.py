@@ -1,9 +1,6 @@
 import tensorflow as tf
 import yaml
 import os
-import PIL.Image
-import io
-
 from object_detection.utils import dataset_util
 
 
@@ -29,7 +26,7 @@ LABEL_DICT =  {
     }
 
 def create_tf_example(example):
-    # TODO(user): Populate the following variables from your example.
+    
     height = 720 # Image height
     width = 1280 # Image width
     filename = example['path'] # Filename of the image. Empty if image is not from file
@@ -38,10 +35,7 @@ def create_tf_example(example):
     with tf.gfile.GFile(example['path'], 'rb') as fid:
         encoded_image = fid.read()
 
-    #encoded_jpg_io = io.BytesIO(encoded_jpg)
-    #image = PIL.Image.open(encoded_jpg_io)
-    #encoded_image_data = image.tostring() # Encoded image bytes
-    image_format = 'png'.encode() # b'jpeg' or b'png'
+    image_format = 'png'.encode() 
 
     xmins = [] # List of normalized left x coordinates in bounding box (1 per box)
     xmaxs = [] # List of normalized right x coordinates in bounding box
