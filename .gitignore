@@ -144,3 +144,7 @@ tf_records_data/
 train_out/
 eval_out/
 utils/
+test_images_sim/
+test_images_udacity/
+frozen_out/
+.vs/
