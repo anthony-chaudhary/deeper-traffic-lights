@@ -27,8 +27,10 @@ LABEL_DICT =  {
 
 def create_tf_example(example):
     
+    # Bosch
     height = 720 # Image height
     width = 1280 # Image width
+
     filename = example['path'] # Filename of the image. Empty if image is not from file
     filename = filename.encode()
 
@@ -47,14 +49,14 @@ def create_tf_example(example):
     classes = [] # List of integer class id of bounding box (1 per box)
 
     for box in example['boxes']:
-        if box['occluded'] is False:
-            #print("adding box")
-            xmins.append(float(box['x_min'] / width))
-            xmaxs.append(float(box['x_max'] / width))
-            ymins.append(float(box['y_min'] / height))
-            ymaxs.append(float(box['y_max'] / height))
-            classes_text.append(box['label'].encode())
-            classes.append(int(LABEL_DICT[box['label']]))
+        #if box['occluded'] is False:
+        #print("adding box")
+        xmins.append(float(box['x_min'] / width))
+        xmaxs.append(float(box['x_max'] / width))
+        ymins.append(float(box['y_min'] / height))
+        ymaxs.append(float(box['y_max'] / height))
+        classes_text.append(box['label'].encode())
+        classes.append(int(LABEL_DICT[box['label']]))
 
 
     tf_example = tf.train.Example(features=tf.train.Features(feature={
@@ -78,8 +80,9 @@ def create_tf_example(example):
 def main(_):
     
     writer = tf.python_io.TFRecordWriter(FLAGS.output_path)
-
-    INPUT_YAML = "data/dataset_train_rgb/train.yaml"
+    
+    # BOSCH
+    INPUT_YAML = "data/test-bosch/dataset_test_rgb/test.yaml"
     examples = yaml.load(open(INPUT_YAML, 'rb').read())
 
     #examples = examples[:10]  # for testing
